@@ -1,4 +1,4 @@
-const chigakuData = [
+[
   {
     "q": "’n‹…‚Ì”¼Œa‚Í‚¨‚æ‚»7200km‚Å‚ ‚éB",
     "a": "~",
@@ -689,4 +689,4 @@ const chigakuData = [
     "a": "›",
     "ex": "’†"
   }
-];
+]
