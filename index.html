@@ -416,7 +416,7 @@
     const fbExpl = document.getElementById("explanation-text");
 
     fbBox.className = "feedback-box " + (isCorrect ? "correct" : "wrong");
-    fbTitle.textContent = isCorrect ? "解 正解！" : "不解 不正解...";
+    fbTitle.textContent = isCorrect ? "正解！すばらしい！" : "残念　不正解...";
     fbExpl.textContent = currentQ.ex || "解説はありません。";
     
     fbBox.style.display = "block";
@@ -447,7 +447,7 @@
     let sub = `正解数: ${correctCount} / ${testPool.length} 問`;
 
     // 客観的かつ段階的なスコア評価
-    if (pct >= 90) { title = "優秀（合格圏内）"; }
+    if (pct >= 90) { title = "優秀（ほぼ定着）"; }
     else if (pct >= 70) { title = "良好（標準レベル）"; }
     else if (pct >= 50) { title = "要復習（知識定着不足）"; }
     else { title = "基礎確認（テキストの再読が必要です）"; }
