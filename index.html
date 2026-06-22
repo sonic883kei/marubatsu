@@ -242,6 +242,15 @@
     font-size: 14px;
     padding: 12px 0;
   }
+
+  /* ===== 認証エラー画面用スタイル ===== */
+  .auth-error-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--wrong);
+    font-size: 18px;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
@@ -250,7 +259,7 @@
   <h1 id="app-title">知識分野○×演習</h1>
 </header>
 
-<div class="container">
+<div class="container" id="main-container">
   
   <div id="portal-screen" class="screen active">
     <div class="setting-group">
@@ -342,6 +351,33 @@
 </div>
 
 <script>
+  // ===== 簡易暗証番号認証システム =====
+  const CORRECT_PIN = "1234";
+  const AUTH_SESSION_KEY = "quiz_authenticated";
+
+  function checkAuthentication() {
+    // セッションですでに認証済みの場合はスルー
+    if (sessionStorage.getItem(AUTH_SESSION_KEY) === "true") {
+      return true;
+    }
+
+    const userPin = prompt("演習を開始するには暗証番号を入力してください。");
+    
+    if (userPin === CORRECT_PIN) {
+      sessionStorage.setItem(AUTH_SESSION_KEY, "true");
+      return true;
+    } else {
+      // 認証失敗時、コンテナの中身をエラーメッセージに差し替えて操作不能にする
+      const container = document.getElementById("main-container");
+      container.innerHTML = `
+        <div class="auth-error-message">
+          暗証番号が正しくありません。アクセスが拒否されました。<br>
+          再試行する場合はページをリロードしてください。
+        </div>`;
+      return false;
+    }
+  }
+
   // 状態管理変数
   let selectedSubject = "";
   let selectedCount = "10";
@@ -424,8 +460,11 @@
     }[m]));
   }
 
-  // 初期化：選択ロジックのイベントリスナー設定
+  // 初期化：DOM読み込み完了時にまず認証を行う
   document.addEventListener("DOMContentLoaded", () => {
+    // 認証チェックを最初に実行。失敗した場合は以降のリスナー登録等をスキップ
+    if (!checkAuthentication()) return;
+
     setupSelector("subject-selector", (val) => { selectedSubject = val; });
     setupSelector("count-selector", (val) => { selectedCount = val; });
     setupSelector("order-selector", (val) => { selectedOrder = val; });
@@ -433,6 +472,7 @@
 
   function setupSelector(containerId, callback) {
     const container = document.getElementById(containerId);
+    if (!container) return; // 認証失敗時のエラーハンドリング
     container.addEventListener("click", (e) => {
       if (!e.target.classList.contains("option-btn")) return;
       container.querySelectorAll(".option-btn").forEach(btn => btn.classList.remove("selected"));
@@ -540,7 +580,7 @@
     const fbExpl = document.getElementById("explanation-text");
 
     fbBox.className = "feedback-box " + (isCorrect ? "correct" : "wrong");
-    fbTitle.textContent = isCorrect ? "正解！すばらしい！" : "残念　不正解…";
+    fbTitle.textContent = isCorrect ? "正解！すばらしい！" : "残念 不正解…";
     fbExpl.textContent = currentQ.ex || "解説はありません。";
     
     fbBox.style.display = "block";
