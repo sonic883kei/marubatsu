@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>○× 問題演習</title>
+<title>知識分野○×演習</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -48,6 +48,7 @@
     border: 1px solid var(--border);
     padding: 24px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    position: relative; /* 認証画面の配置用 */
   }
 
   .screen { display: none; }
@@ -243,13 +244,156 @@
     padding: 12px 0;
   }
 
-  /* ===== 認証エラー画面用スタイル ===== */
-  .auth-error-message {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--wrong);
-    font-size: 18px;
+  /* ===== 認証画面用スタイル ===== */
+  .auth-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .auth-dialog {
+    background: #11141d;
+    width: 90%;
+    max-width: 420px;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .auth-icon-box {
+    width: 60px;
+    height: 60px;
+    background: #191c28;
+    border: 1px solid rgba(124, 92, 245, 0.2);
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  /* 鍵アイコン（SVG） */
+  .lock-icon {
+    width: 24px;
+    height: 24px;
+    stroke: var(--accent2);
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .auth-title {
+    font-size: 20px;
     font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 10px;
+  }
+
+  .auth-description {
+    font-size: 14px;
+    color: #8b90aa;
+    text-align: center;
+    margin-bottom: 30px;
+    line-height: 1.5;
+  }
+
+  .pin-input-area {
+    width: 100%;
+    position: relative;
+    margin-bottom: 24px;
+  }
+
+  .pin-input {
+    width: 100%;
+    height: 54px;
+    background: #191c28;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 32px;
+    color: transparent;
+    text-align: center;
+    letter-spacing: 0.5em;
+    caret-color: #ffffff;
+  }
+  .pin-input:focus {
+    outline: none;
+    border-color: rgba(124, 92, 245, 0.5);
+    box-shadow: 0 0 0 3px rgba(124, 92, 245, 0.1);
+  }
+
+  .pin-dots {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3c4155;
+    margin: 0 8px;
+    transition: background 0.1s ease;
+  }
+  .dot.active {
+    background: #ffffff;
+  }
+
+  .auth-submit-btn {
+    width: 100%;
+    height: 54px;
+    background: var(--accent2);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .auth-submit-btn:hover {
+    opacity: 0.9;
+  }
+  .auth-submit-btn:active {
+    transform: scale(0.99);
+  }
+
+  .auth-error-text {
+    font-size: 12px;
+    color: var(--wrong);
+    margin-top: 12px;
+    height: 1em;
+    display: none; /* 初期状態では非表示 */
+  }
+
+  /* アクセス拒否時のスタイル */
+  .auth-denied {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--wrong);
+    font-weight: bold;
+    font-size: 18px;
+    height: 300px;
   }
 </style>
 </head>
@@ -350,32 +494,104 @@
 
 </div>
 
+<!-- 認証オーバーレイ画面 -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-dialog">
+    <div class="auth-icon-box">
+      <!-- 鍵アイコン（SVG） -->
+      <svg class="lock-icon" viewBox="0 0 24 24">
+        <rect x="5" y="11" width="14" height="10" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+    </div>
+    <div class="auth-title">学生認証</div>
+    <div class="auth-description">在籍生専用システムです。暗証番号を入力してください。</div>
+    
+    <div class="pin-input-area">
+      <!-- 実際の入力 -->
+      <input type="password" id="pin-input" class="pin-input" maxlength="4" pattern="\d*">
+      <!-- 見た目のドット -->
+      <div id="pin-dots" class="pin-dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+
+    <button id="auth-submit-btn" class="auth-submit-btn" onclick="submitPin()">認証する</button>
+    <div id="auth-error-text" class="auth-error-text">暗証番号が正しくありません</div>
+  </div>
+</div>
+
 <script>
-  // ===== 簡易暗証番号認証システム =====
+  // ===== 認証システム（修正版） =====
   const CORRECT_PIN = "1234";
   const AUTH_SESSION_KEY = "quiz_authenticated";
 
-  function checkAuthentication() {
-    // セッションですでに認証済みの場合はスルー
-    if (sessionStorage.getItem(AUTH_SESSION_KEY) === "true") {
-      return true;
+  const authOverlay = document.getElementById('auth-overlay');
+  const pinInput = document.getElementById('pin-input');
+  const pinDots = document.getElementById('pin-dots').children;
+  const authErrorText = document.getElementById('auth-error-text');
+  const container = document.getElementById("main-container");
+
+  // 入力時のドット更新と自動送信
+  pinInput.addEventListener('input', (e) => {
+    // 数字以外を除去（iOSなどで発生することがある）
+    e.target.value = e.target.value.replace(/\D/g, '');
+    const length = e.target.value.length;
+    
+    // エラー表示を消す
+    authErrorText.style.display = "none";
+
+    // ドットの表示を更新
+    for (let i = 0; i < 4; i++) {
+      if (i < length) {
+        pinDots[i].classList.add('active');
+      } else {
+        pinDots[i].classList.remove('active');
+      }
     }
 
-    const userPin = prompt("演習を開始するには暗証番号を入力してください。");
+    // 4桁入力されたら自動で送信（遅延させて演出）
+    if (length === 4) {
+      setTimeout(submitPin, 150);
+    }
+  });
+
+  // ページ読み込み時のチェック
+  document.addEventListener("DOMContentLoaded", () => {
+    if (sessionStorage.getItem(AUTH_SESSION_KEY) === "true") {
+      authOverlay.style.display = "none";
+      initAppSettings();
+    } else {
+      pinInput.focus();
+    }
+  });
+
+  function submitPin() {
+    const userPin = pinInput.value;
     
     if (userPin === CORRECT_PIN) {
       sessionStorage.setItem(AUTH_SESSION_KEY, "true");
-      return true;
+      authOverlay.style.display = "none";
+      initAppSettings();
     } else {
-      // 認証失敗時、コンテナの中身をエラーメッセージに差し替えて操作不能にする
-      const container = document.getElementById("main-container");
-      container.innerHTML = `
-        <div class="auth-error-message">
-          暗証番号が正しくありません。アクセスが拒否されました。<br>
-          再試行する場合はページをリロードしてください。
-        </div>`;
-      return false;
+      // 認証失敗
+      authErrorText.style.display = "block";
+      // 入力をリセット
+      pinInput.value = "";
+      for (let i = 0; i < 4; i++) {
+        pinDots[i].classList.remove('active');
+      }
+      pinInput.focus();
     }
+  }
+
+  function initAppSettings() {
+    setupSelector("subject-selector", (val) => { selectedSubject = val; });
+    setupSelector("count-selector", (val) => { selectedCount = val; });
+    setupSelector("order-selector", (val) => { selectedOrder = val; });
   }
 
   // 状態管理変数
@@ -460,19 +676,9 @@
     }[m]));
   }
 
-  // 初期化：DOM読み込み完了時にまず認証を行う
-  document.addEventListener("DOMContentLoaded", () => {
-    // 認証チェックを最初に実行。失敗した場合は以降のリスナー登録等をスキップ
-    if (!checkAuthentication()) return;
-
-    setupSelector("subject-selector", (val) => { selectedSubject = val; });
-    setupSelector("count-selector", (val) => { selectedCount = val; });
-    setupSelector("order-selector", (val) => { selectedOrder = val; });
-  });
-
   function setupSelector(containerId, callback) {
     const container = document.getElementById(containerId);
-    if (!container) return; // 認証失敗時のエラーハンドリング
+    if (!container) return; 
     container.addEventListener("click", (e) => {
       if (!e.target.classList.contains("option-btn")) return;
       container.querySelectorAll(".option-btn").forEach(btn => btn.classList.remove("selected"));
