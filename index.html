@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>知識分野○×演習 - 対戦モード</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -25,6 +25,7 @@
     color: var(--text);
     font-family: 'Hiragino Kaku Gothic Pro', 'Meiryo', sans-serif;
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -165,8 +166,9 @@
     margin-bottom: 20px;
   }
   .ox-btn {
-    height: 84px;
-    font-size: 36px;
+    height: 100%;
+    min-height: 60px;
+    font-size: 32px;
     border: none;
     border-radius: var(--radius);
     cursor: pointer;
@@ -382,18 +384,26 @@
     display: none;
   }
 
-  /* ===== 🌟 対戦モードレイアウトスタイル ===== */
+  /* ===== 🌟 対戦モードレイアウトスタイル（アドレスバー表示時の見切れ修正） ===== */
   .vs-layout-container {
     display: flex;
     flex-direction: column;
+    /* 100dvhでブラウザのアドレスバー考慮した画面高さに対応 */
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
+    width: 100dvw;
     position: fixed;
     top: 0;
     left: 0;
     z-index: 500;
     background: #090a0f;
     overflow: hidden;
+    /* セーフエリア対応 */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 
   /* プレイヤーエリア共通 */
@@ -402,10 +412,12 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 16px;
+    padding: 8px 12px;
     position: relative;
     box-sizing: border-box;
     transition: background-color 0.15s ease;
+    min-height: 0; /* flex要素の収縮を許可 */
+    overflow: hidden;
   }
 
   /* プレイヤー1（画面上部）：180度回転し対面に向ける */
@@ -422,7 +434,8 @@
 
   /* 仕切り中央タイマーバー */
   .divider-bar {
-    height: 44px;
+    height: 38px;
+    flex-shrink: 0;
     background: #151824;
     display: flex;
     align-items: center;
@@ -434,6 +447,7 @@
     border-bottom: 2px solid #2e3248;
     box-shadow: 0 0 15px rgba(0,0,0,0.5);
     z-index: 510;
+    position: relative;
   }
 
   /* 対戦用ミニステータス */
@@ -441,8 +455,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--sub);
+    flex-shrink: 0;
+    padding-bottom: 4px;
   }
 
   /* 対戦用問題文カード */
@@ -450,25 +466,27 @@
     background: #1c1e2d;
     border: 1px solid #2e3248;
     border-radius: var(--radius);
-    padding: 16px;
+    padding: 10px 14px;
     flex: 1;
-    margin: 10px 0;
+    margin: 6px 0;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 16px;
-    line-height: 1.5;
+    font-size: 15px;
+    line-height: 1.4;
     color: #fff;
     overflow-y: auto;
+    min-height: 0; /* 画面が狭い時に縮小を許可 */
   }
 
-  /* 対戦用ボタン */
+  /* 対戦用ボタン領域（最優先で高さを確保） */
   .vs-ox-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    height: 80px;
+    gap: 10px;
+    height: 64px;
+    flex-shrink: 0; /* ○×ボタン領域は潰さない */
   }
 
   /* カウントダウンオーバーレイ */
@@ -478,6 +496,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(10, 11, 16, 0.95);
     z-index: 600;
     display: flex;
@@ -645,7 +664,7 @@
       問題文がここに表示されます。
     </div>
 
-    <div class="ox-container">
+    <div class="ox-container" style="height: 80px;">
       <button class="ox-btn btn-o" onclick="handleAnswer('○')">○</button>
       <button class="ox-btn btn-x" onclick="handleAnswer('×')">×</button>
     </div>
@@ -710,7 +729,7 @@
   <div class="text-sm mt-4 text-gray-400">スマホを間に挟んで向かい合ってください！</div>
 </div>
 
-<!-- 🌟 対戦用フルスクリーン画面 -->
+<!-- 🌟 対戦用フルスクリーン画面 (画面サイズ固定＆自動フィット設定) -->
 <div id="vs-game-container" class="vs-layout-container" style="display: none;">
   
   <!-- プレイヤー1（画面上部・180度反転） -->
@@ -725,7 +744,6 @@
     </div>
     
     <div class="vs-ox-container">
-      <!-- 左右配置をプレイヤー2と対面にするため、並びを反転させて直感性を高めています -->
       <button class="ox-btn btn-x" onclick="handleVsAnswer(1, '×')">×</button>
       <button class="ox-btn btn-o" onclick="handleVsAnswer(1, '○')">○</button>
     </div>
@@ -818,7 +836,7 @@
 </div>
 
 <script>
-  // ===== 🌟 内蔵フォールバック問題データ（サーバーJSON不在時でも動くように全問を確保） =====
+  // 内蔵フォールバック問題データ
   const EMBEDDED_QUESTIONS = {
     seiji: [
       { q: "日本国憲法は、天皇を「国事行為を行うのみの象徴」と規定している。", a: "○", ex: "憲法第4条に、天皇は憲法の定める国事に関する行為のみを行い、国政に関する権能を有しないと定められています。" },
@@ -917,7 +935,7 @@
       { q: "水の分子式はH2Oであるが、水分子1つには共有結合が3箇所存在する。", a: "×", ex: "H-O-Hの構造であり、酸素原子と水素原子の間の共有結合は2箇所です。" }
     ],
     butsuri: [
-      { q: "オームの法則は、電流が電圧に比例し、抵抗に反比例するという関係を示す（I = V / R）。", a: "○", ex: "オームの法則の基本形です。抵抗Rが一定なら電流Iは電圧Vに比例します（問題画像の逆転文「電流が電圧に反比例する」は×になります）。" },
+      { q: "オームの法則は、電流が電圧に比例し、抵抗に反比例するという関係を示す（I = V / R）。", a: "○", ex: "オームの法則の基本形です。抵抗Rが一定なら電流Iは電圧Vに比例します。" },
       { q: "作用・反作用の法則によれば、物体Aが物体Bに力を加えるとき、Bも同時にAへ同じ大きさで逆向きの力を加える。", a: "○", ex: "ニュートンの第3法則です。作用と反作用は常にペアで同時に発生します。" },
       { q: "真空中で羽毛と鉄球を同時に落とした場合、重い鉄球の方が先に底に到達する。", a: "×", ex: "空気抵抗がない真空中では、質量に関わらずすべての物体は同じ重力加速度（約9.8m/s²）で等しく落下します。" },
       { q: "音波は空気中を伝わる「横波」の一種である。", a: "×", ex: "音波（空気中）は、媒質の振動方向と進む方向が同じ「縦波（疎密波）」です。" },
@@ -1005,23 +1023,22 @@
   let selectedCount = "10";
   let selectedOrder = "random";
 
-  let masterQuestions = []; // 読み込んだ科目の全問題
-  let testPool = [];        // 抽出・調整後の出題用プール
+  let masterQuestions = [];
+  let testPool = [];
   let currentIdx = 0;
   let correctCount = 0;
   let sessionWrongQuestions = []; 
-  let isVsMode = false; // 🌟対戦モードの判定フラグ
+  let isVsMode = false;
 
-  // 🌟 対戦用状態管理
+  // 対戦用状態管理
   let vsTimer = null;
-  let vsTimeLeft = 60.0; // 1分 (60秒)
+  let vsTimeLeft = 60.0;
   let vsStartTime = 0;
   
-  // プレイヤー1とプレイヤー2の状態
   const p1 = {
     questions: [],
     idx: 0,
-    answers: [], // {qIdx, userAns, isCorrect, timestamp} の配列
+    answers: [],
     correctCount: 0,
     finished: false,
     finishTime: null
@@ -1173,7 +1190,7 @@
     }
   }
 
-  // ===== 🌟 クイズ読み込みと開始制御 =====
+  // ===== クイズ読み込みと開始制御 =====
   async function loadAndStartQuiz(vsModeActive = false) {
     if (!selectedSubject) {
       showMessageBox("演習を行う科目を選択してください。");
@@ -1183,16 +1200,13 @@
     isVsMode = vsModeActive;
 
     try {
-      // 外部サーバーJSON読み込みの試行
       const response = await fetch(`${selectedSubject}.json`);
       if (response.ok) {
         masterQuestions = await response.json();
       } else {
-        // 失敗時は内蔵フォールバックを使用
         masterQuestions = EMBEDDED_QUESTIONS[selectedSubject] || [];
       }
     } catch (error) {
-      // オフライン・ローカル・エラー時は内蔵フォールバックを使用
       masterQuestions = EMBEDDED_QUESTIONS[selectedSubject] || [];
     }
 
@@ -1208,7 +1222,6 @@
     }
   }
 
-  // メッセージボックス表示 (alert代替)
   function showMessageBox(msg) {
     const modal = document.getElementById("detail-modal");
     document.getElementById("detail-modal-subject").textContent = "お知らせ";
@@ -1218,7 +1231,7 @@
     modal.style.display = "flex";
   }
 
-  // ===== 🌟 通常モード開始処理 =====
+  // ===== 通常モード開始処理 =====
   function initQuizPool() {
     let pool = [...masterQuestions];
 
@@ -1239,7 +1252,6 @@
     correctCount = 0;
     sessionWrongQuestions = []; 
 
-    // UI切り替え
     document.getElementById("portal-screen").classList.remove("active");
     document.getElementById("quiz-screen").classList.add("active");
     document.getElementById("history-panel").style.display = "block";
@@ -1265,7 +1277,7 @@
   }
 
   function toggleOXButtons(enabled) {
-    document.querySelectorAll(".ox-btn").forEach(btn => btn.disabled = !enabled);
+    document.querySelectorAll("#quiz-screen .ox-btn").forEach(btn => btn.disabled = !enabled);
   }
 
   function handleAnswer(userAns) {
@@ -1304,8 +1316,7 @@
     }
   }
 
-
-  // ===== 🌟 対戦モード：カウントダウン制御 =====
+  // ===== 対戦モード：カウントダウン制御 =====
   function startVsCountdown() {
     const portal = document.getElementById("portal-screen");
     const countdownOverlay = document.getElementById("countdown-overlay");
@@ -1331,24 +1342,19 @@
     }, 1000);
   }
 
-  // ===== 🌟 対戦モード：ゲームボード初期化 =====
+  // ===== 対戦モード：ゲームボード初期化 =====
   function initVsGame() {
-    // 常に10問に限定
     let poolP1 = [...masterQuestions];
-    let poolP2 = [...masterQuestions];
 
-    // それぞれ問題順序をランダムシャッフル（同じ問題を違う順で解く、または同じ順で競う）
-    // フェアにするために「同一の10問リストを同一の順序（ランダム順）」で提供します。
     for (let i = poolP1.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [poolP1[i], poolP1[j]] = [poolP1[j], poolP1[i]];
     }
     poolP1 = poolP1.slice(0, 10);
-    poolP2 = [...poolP1]; // プレイヤー2も全く同じ順番で解答
+    let poolP2 = [...poolP1];
 
     const subjectText = document.querySelector(`#subject-selector [data-subject="${selectedSubject}"]`).textContent;
 
-    // プレイヤー1状態リセット
     p1.questions = poolP1;
     p1.idx = 0;
     p1.answers = [];
@@ -1358,7 +1364,6 @@
     document.getElementById("p1-subject-title").textContent = `科目: ${subjectText}`;
     document.getElementById("p1-waiting").style.display = "none";
 
-    // プレイヤー2状態リセット
     p2.questions = poolP2;
     p2.idx = 0;
     p2.answers = [];
@@ -1368,15 +1373,12 @@
     document.getElementById("p2-subject-title").textContent = `科目: ${subjectText}`;
     document.getElementById("p2-waiting").style.display = "none";
 
-    // 表示反映
     updateVsQuestion(1);
     updateVsQuestion(2);
 
-    // 画面切り替え
     document.getElementById("main-header").style.display = "none";
     document.getElementById("vs-game-container").style.display = "flex";
 
-    // 1分間タイマースタート
     vsTimeLeft = 60.0;
     vsStartTime = Date.now();
     document.getElementById("vs-timer-text").textContent = vsTimeLeft.toFixed(1);
@@ -1393,7 +1395,7 @@
         document.getElementById("vs-timer-text").textContent = "0.0";
         document.getElementById("vs-timer-bar").style.width = "0%";
         clearInterval(vsTimer);
-        endVsGame(true); // タイムアップ終了
+        endVsGame(true);
       } else {
         document.getElementById("vs-timer-text").textContent = vsTimeLeft.toFixed(1);
         document.getElementById("vs-timer-bar").style.width = `${(vsTimeLeft / 60.0) * 100}%`;
@@ -1401,7 +1403,6 @@
     }, 100);
   }
 
-  // 対戦画面の問題・進捗更新
   function updateVsQuestion(playerNum) {
     const p = (playerNum === 1) ? p1 : p2;
     const progressEl = document.getElementById(`p${playerNum}-progress`);
@@ -1411,22 +1412,19 @@
       progressEl.textContent = `${p.idx + 1} / ${p.questions.length} 問`;
       qCardEl.textContent = p.questions[p.idx].q;
     } else {
-      // 解答終了
       p.finished = true;
       if (!p.finishTime) {
         p.finishTime = Date.now();
       }
       document.getElementById(`p${playerNum}-waiting`).style.display = "flex";
       
-      // 両者完了チェック
       if (p1.finished && p2.finished) {
         clearInterval(vsTimer);
-        endVsGame(false); // 全解答完了
+        endVsGame(false);
       }
     }
   }
 
-  // 🌟 対戦の解答判定
   function handleVsAnswer(playerNum, userAns) {
     const p = (playerNum === 1) ? p1 : p2;
     if (p.finished || p.idx >= p.questions.length) return;
@@ -1439,7 +1437,6 @@
       p.correctCount++;
     }
 
-    // 各回答結果をストック
     p.answers.push({
       qIdx: p.idx,
       userAns: userAns,
@@ -1447,7 +1444,6 @@
       timestamp: timeStamp
     });
 
-    // 瞬間的な正誤フラッシュ演出
     const areaEl = document.getElementById(`p${playerNum}-area`);
     const flashClass = isCorrect ? "flash-correct" : "flash-wrong";
     areaEl.classList.add(flashClass);
@@ -1459,15 +1455,14 @@
     updateVsQuestion(playerNum);
   }
 
-  // ===== 🌟 対戦終了と勝敗判定 =====
+  // ===== 対戦終了と勝敗判定 =====
   function endVsGame(isTimeout = false) {
     document.getElementById("vs-game-container").style.display = "none";
     document.getElementById("main-header").style.display = "block";
     
-    // 結果表示の準備
     document.getElementById("quiz-screen").classList.remove("active");
     document.getElementById("result-screen").classList.add("active");
-    document.getElementById("history-panel").style.display = "none"; // 対戦時は個人の履歴履歴は非表示
+    document.getElementById("history-panel").style.display = "none";
     document.getElementById("vs-result-details").style.display = "block";
 
     document.getElementById("result-mode-title").textContent = "⚔️ 対戦結果 ⚔️";
@@ -1475,11 +1470,10 @@
     const p1Score = p1.correctCount;
     const p2Score = p2.correctCount;
 
-    // 経過時間計算
     const p1Duration = p1.finishTime ? (p1.finishTime - vsStartTime) / 1000 : 60.0;
     const p2Duration = p2.finishTime ? (p2.finishTime - vsStartTime) / 1000 : 60.0;
 
-    let winner = 0; // 0: 引き分け, 1: P1, 2: P2
+    let winner = 0;
     let winReason = "";
 
     if (p1Score > p2Score) {
@@ -1489,9 +1483,7 @@
       winner = 2;
       winReason = "正解数でプレイヤー2の勝利！";
     } else {
-      // 同点の場合のスピード判定
       if (!isTimeout) {
-        // 共に10問解き終えている場合：合計タイム勝負
         if (p1Duration < p2Duration) {
           winner = 1;
           winReason = `同点ですが、解答完了が ${ (p2Duration - p1Duration).toFixed(1) } 秒早かったプレイヤー1の勝利！`;
@@ -1503,8 +1495,6 @@
           winReason = "同点かつ完全に同時に終わったため、引き分け！";
         }
       } else {
-        // タイムアウト時に同点だった場合
-        // 解答した最新問題の完了タイムスタンプが早い方が勝ち
         const p1LastAns = p1.answers[p1.answers.length - 1];
         const p2LastAns = p2.answers[p2.answers.length - 1];
 
@@ -1515,7 +1505,6 @@
           winner = 2;
           winReason = "同点ですが、より多くの問題を解き進めていたプレイヤー2の勝利！";
         } else if (p1LastAns && p2LastAns) {
-          // 同一問題数で同点の場合、最後の解答を先に送信したプレイヤーの勝ち
           if (p1LastAns.timestamp < p2LastAns.timestamp) {
             winner = 1;
             winReason = "同点ですが、最新解答のペースが早かったプレイヤー1の勝利！";
@@ -1533,7 +1522,6 @@
       }
     }
 
-    // UI出力
     const scoreTitleEl = document.getElementById("result-pct");
     const evalEl = document.getElementById("result-title");
     const subEl = document.getElementById("result-sub");
@@ -1566,7 +1554,6 @@
       <p class="text-yellow-400 font-bold mt-2 text-sm">${winReason}</p>
     `;
 
-    // 対戦解答一覧詳細を生成
     const summaryRowsContainer = document.getElementById("vs-summary-rows");
     summaryRowsContainer.innerHTML = "";
 
@@ -1632,13 +1619,11 @@
     renderHistory();
   }
 
-  // ポータルへ戻る
   function backToPortal() {
     document.getElementById("result-screen").classList.remove("active");
     document.getElementById("portal-screen").classList.add("active");
   }
 
-  // 同じ条件でリトライ
   function retryQuiz() {
     document.getElementById("result-screen").classList.remove("active");
     if (isVsMode) {
