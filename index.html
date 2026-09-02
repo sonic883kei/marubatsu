@@ -434,7 +434,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
+    padding: 0 12px;
     font-weight: bold;
     color: #fff;
     border-top: 2px solid #2e3248;
@@ -583,6 +583,23 @@
     overflow-y: auto;
     padding-right: 4px;
   }
+
+  /* 追加: 共通の小ボタン */
+  .small-nav-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border);
+    color: #c5c9de;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .small-nav-btn:hover {
+    background: var(--accent);
+    color: #fff;
+  }
 </style>
 </head>
 <body>
@@ -633,6 +650,8 @@
     <div class="start-btn-container">
       <button class="primary-btn" onclick="loadAndStartQuiz(false)">通常演習を開始する</button>
       <button class="primary-btn vs-btn" onclick="loadAndStartQuiz(true)">🔥 対戦モードを開始する</button>
+      <!-- 追加: トップページから直近の得点記録を見るボタン -->
+      <button class="secondary-btn" style="margin-top: 6px; width: 100%; max-width: 320px;" onclick="openHistoryModalFromPortal()">📜 直近の得点記録を見る</button>
     </div>
   </div>
 
@@ -640,7 +659,11 @@
   <div id="quiz-screen" class="screen">
     <div class="quiz-header">
       <span id="quiz-title-display">科目: 未選択</span>
-      <span id="progress-text">0 / 0 問</span>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span id="progress-text">0 / 0 問</span>
+        <!-- 追加:演習中のトップページに戻るボタン -->
+        <button class="small-nav-btn" onclick="confirmReturnHome()">🏠 トップへ</button>
+      </div>
     </div>
     <div class="progress-container">
       <div id="progress-fill" class="progress-fill"></div>
@@ -747,7 +770,11 @@
       <span>TIME</span>
       <span id="vs-timer-text" style="font-family: monospace; font-size: 18px; color: #fff;">60.0</span>
     </div>
-    <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: #a29bfe;">VS MODE</div>
+    <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: #a29bfe; display: flex; align-items: center; gap: 8px;">
+      <span>VS MODE</span>
+      <!-- 追加: 対戦モード内のトップに戻るボタン -->
+      <button class="small-nav-btn" style="padding: 2px 8px; font-size: 10px;" onclick="confirmReturnHome(true)">🏠 中断</button>
+    </div>
     <div id="vs-timer-bar" style="position: absolute; bottom: 0; left: 0; height: 3px; background: #e74c3c; width: 100%; transition: width 0.1s linear;"></div>
   </div>
 
@@ -802,7 +829,7 @@
   </div>
 </div>
 
-<!-- 履歴詳細モーダル -->
+<!-- 履歴詳細モーダル / ポータル用履歴確認モーダル共通 -->
 <div id="detail-modal" class="auth-overlay" style="display: none;">
   <div class="detail-modal-dialog">
     <div class="detail-modal-header">
@@ -1011,6 +1038,10 @@
     if (!confirm("保存されている得点記録をすべて削除します。よろしいですか？")) return;
     localStorage.removeItem(HISTORY_KEY);
     renderHistory();
+    // モーダルが開いている場合は更新
+    if (document.getElementById("detail-modal").style.display === "flex") {
+      openHistoryModalFromPortal();
+    }
   }
 
   function renderHistory() {
@@ -1044,6 +1075,55 @@
         <tbody>${rows}</tbody>
       </table>
     `;
+  }
+
+  // 追加: トップページから得点記録一覧を開く処理
+  function openHistoryModalFromPortal() {
+    const history = loadHistory();
+    document.getElementById("detail-modal-subject").textContent = "直近の得点記録一覧";
+    document.getElementById("detail-modal-date").textContent = "最大10件の履歴を表示（行をタップして詳細確認）";
+
+    const contentArea = document.getElementById("detail-modal-content");
+    contentArea.innerHTML = "";
+
+    if (history.length === 0) {
+      contentArea.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: var(--sub); font-size: 14px;">
+          まだ記録がありません。演習を行うとここに記録が表示されます。
+        </div>
+      `;
+    } else {
+      const historyListContainer = document.createElement("div");
+      
+      const rows = history.map((r, idx) => `
+        <tr class="history-row" onclick="openDetailModal(${idx})">
+          <td>${escapeHtml(r.date)}</td>
+          <td>${escapeHtml(r.subjectLabel)}</td>
+          <td>${r.correct} / ${r.total}</td>
+          <td>${r.pct}%</td>
+        </tr>
+      `).join("");
+
+      historyListContainer.innerHTML = `
+        <div class="flex justify-end mb-2">
+          <button class="history-clear-btn" onclick="clearHistory()">記録を削除</button>
+        </div>
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>日時</th>
+              <th>科目</th>
+              <th>正答数/問題数</th>
+              <th>正答率</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+      contentArea.appendChild(historyListContainer);
+    }
+
+    document.getElementById("detail-modal").style.display = "flex";
   }
 
   function openDetailModal(idx) {
@@ -1245,6 +1325,20 @@
       showQuestion();
     } else {
       showResult();
+    }
+  }
+
+  // 追加: 演習中断してトップ画面に戻る処理
+  function confirmReturnHome(isVs = false) {
+    if (confirm("演習を中断してトップページに戻りますか？（現在の進捗は保存されません）")) {
+      if (isVs) {
+        if (vsTimer) clearInterval(vsTimer);
+        document.getElementById("vs-game-container").style.display = "none";
+        document.getElementById("main-header").style.display = "block";
+      } else {
+        document.getElementById("quiz-screen").classList.remove("active");
+      }
+      document.getElementById("portal-screen").classList.add("active");
     }
   }
 
