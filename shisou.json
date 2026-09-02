@@ -1,5 +1,9 @@
-﻿/* STREAMING_CHUNK:Initializing json question array... */
-[
+﻿[
+  {
+    "q": "問題",
+    "a": "正答",
+    "ex": "解説"
+  },
 {
 "q": "タレスは万物の根源を水と考えた。",
 "a": "○",
