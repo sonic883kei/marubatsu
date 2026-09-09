@@ -75,6 +75,84 @@
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 10px;
   }
+
+  /* ===== 単元選択（アコーディオン）===== */
+  .setting-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .setting-label-row .setting-label { margin-bottom: 0; }
+  .unit-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--sub);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+  .unit-toggle-btn:hover { color: var(--accent); }
+  .unit-list-container {
+    max-height: 260px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.15);
+  }
+  .unit-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .unit-item:hover { border-color: var(--accent); }
+  .unit-item.selected {
+    border-color: var(--accent);
+    background: rgba(91, 142, 240, 0.12);
+  }
+  .unit-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent2);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .unit-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .unit-count {
+    font-size: 11px;
+    color: var(--sub);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 2px 6px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .unit-loading, .unit-empty {
+    padding: 12px 8px;
+    color: var(--sub);
+    font-size: 13px;
+    text-align: center;
+    grid-column: 1 / -1;
+  }
   .option-btn {
     background: var(--card);
     border: 2px solid var(--border);
@@ -628,6 +706,15 @@
       </div>
     </div>
 
+    <!-- 単元選択（選択中の科目に応じてアコーディオン展開） -->
+    <div class="setting-group" id="unit-select-group" style="display:none;">
+      <div class="setting-label-row">
+        <div class="setting-label">単元を選択</div>
+        <button type="button" class="unit-toggle-btn" id="unit-toggle-all-btn" onclick="toggleAllUnits()">全解除</button>
+      </div>
+      <div class="unit-list-container" id="unit-list-container"></div>
+    </div>
+
     <div class="setting-group" id="normal-count-group">
       <div class="setting-label">出題問題数</div>
       <div class="grid-options" id="count-selector">
@@ -979,7 +1066,7 @@
   }
 
   function initAppSettings() {
-    setupSelector("subject-selector", "subject", (val) => { selectedSubject = val; });
+    setupSelector("subject-selector", "subject", (val) => { onSubjectChange(val); });
     setupSelector("count-selector", "count", (val) => { selectedCount = val; });
     setupSelector("order-selector", "order", (val) => { selectedOrder = val; });
   }
@@ -987,6 +1074,10 @@
   let selectedSubject = "shisou";
   let selectedCount = "20";
   let selectedOrder = "random";
+
+  // 単元選択機能用
+  let masterQuestionsAll = []; // 選択中科目の全問題（単元情報を含む）
+  let selectedUnits = new Set(); // 出題対象として選択中の単元名
 
   let masterQuestions = [];
   let testPool = [];
@@ -1207,6 +1298,119 @@
     }
   }
 
+  // 科目切り替え時に問題データを読み込み、単元選択UIを構築する
+  async function onSubjectChange(subject) {
+    selectedSubject = subject;
+    masterQuestionsAll = [];
+    selectedUnits = new Set();
+
+    const unitGroup = document.getElementById("unit-select-group");
+    const listContainer = document.getElementById("unit-list-container");
+    unitGroup.style.display = "block";
+    listContainer.innerHTML = `<div class="unit-loading">単元情報を読み込み中...</div>`;
+
+    try {
+      const response = await fetch(`${subject}.json`);
+      if (response.ok) {
+        masterQuestionsAll = await response.json();
+      } else {
+        masterQuestionsAll = EMBEDDED_QUESTIONS[subject] || [];
+      }
+    } catch (error) {
+      masterQuestionsAll = EMBEDDED_QUESTIONS[subject] || [];
+    }
+
+    renderUnitSelector();
+  }
+
+  // 単元一覧（チェックボックス）を描画する。単元情報（"s"）を含まないデータの場合はUIごと非表示にする
+  function renderUnitSelector() {
+    const unitGroup = document.getElementById("unit-select-group");
+    const listContainer = document.getElementById("unit-list-container");
+
+    const hasUnitInfo = Array.isArray(masterQuestionsAll) && masterQuestionsAll.some(q => q && q.s);
+
+    if (!hasUnitInfo || masterQuestionsAll.length === 0) {
+      unitGroup.style.display = "none";
+      selectedUnits = new Set();
+      listContainer.innerHTML = "";
+      return;
+    }
+
+    unitGroup.style.display = "block";
+
+    // 単元ごとの問題数を、JSON内の出現順を保ったまま集計
+    const unitCounts = new Map();
+    masterQuestionsAll.forEach(q => {
+      const unitName = (q && q.s) ? q.s : "その他";
+      unitCounts.set(unitName, (unitCounts.get(unitName) || 0) + 1);
+    });
+
+    // デフォルトは全単元選択
+    selectedUnits = new Set(unitCounts.keys());
+
+    listContainer.innerHTML = "";
+    unitCounts.forEach((count, unitName) => {
+      const item = document.createElement("label");
+      item.className = "unit-item selected";
+      item.innerHTML = `
+        <input type="checkbox" class="unit-checkbox" checked data-unit="${escapeHtml(unitName)}">
+        <span class="unit-name">${escapeHtml(unitName)}</span>
+        <span class="unit-count">${count}問</span>
+      `;
+      listContainer.appendChild(item);
+    });
+
+    listContainer.querySelectorAll(".unit-checkbox").forEach(cb => {
+      cb.addEventListener("change", (e) => {
+        const unitName = e.target.dataset.unit;
+        const item = e.target.closest(".unit-item");
+        if (e.target.checked) {
+          selectedUnits.add(unitName);
+          item.classList.add("selected");
+        } else {
+          selectedUnits.delete(unitName);
+          item.classList.remove("selected");
+        }
+        updateUnitToggleButtonLabel();
+      });
+    });
+
+    updateUnitToggleButtonLabel();
+  }
+
+  // 「すべて選択」⇔「全解除」ボタンの切り替え処理
+  function toggleAllUnits() {
+    const listContainer = document.getElementById("unit-list-container");
+    const checkboxes = listContainer.querySelectorAll(".unit-checkbox");
+    if (checkboxes.length === 0) return;
+
+    const shouldSelectAll = selectedUnits.size < checkboxes.length;
+
+    checkboxes.forEach(cb => {
+      const unitName = cb.dataset.unit;
+      const item = cb.closest(".unit-item");
+      cb.checked = shouldSelectAll;
+      if (shouldSelectAll) {
+        selectedUnits.add(unitName);
+        item.classList.add("selected");
+      } else {
+        selectedUnits.delete(unitName);
+        item.classList.remove("selected");
+      }
+    });
+
+    updateUnitToggleButtonLabel();
+  }
+
+  function updateUnitToggleButtonLabel() {
+    const listContainer = document.getElementById("unit-list-container");
+    const total = listContainer.querySelectorAll(".unit-checkbox").length;
+    const btn = document.getElementById("unit-toggle-all-btn");
+    if (!btn) return;
+    btn.textContent = (total > 0 && selectedUnits.size >= total) ? "全解除" : "すべて選択";
+  }
+
   async function loadAndStartQuiz(vsModeActive = false) {
     if (!selectedSubject) {
       showMessageBox("演習を行う科目を選択してください。");
@@ -1215,15 +1419,21 @@
 
     isVsMode = vsModeActive;
 
-    try {
-      const response = await fetch(`${selectedSubject}.json`);
-      if (response.ok) {
-        masterQuestions = await response.json();
-      } else {
-        masterQuestions = EMBEDDED_QUESTIONS[selectedSubject] || [];
+    // 何らかの理由で科目データが未取得の場合は念のため取得を試みる
+    if (!masterQuestionsAll || masterQuestionsAll.length === 0) {
+      await onSubjectChange(selectedSubject);
+    }
+
+    const hasUnitInfo = Array.isArray(masterQuestionsAll) && masterQuestionsAll.some(q => q && q.s);
+
+    if (hasUnitInfo) {
+      if (selectedUnits.size === 0) {
+        showMessageBox("出題する単元を1つ以上選択してください。");
+        return;
       }
-    } catch (error) {
-      masterQuestions = EMBEDDED_QUESTIONS[selectedSubject] || [];
+      masterQuestions = masterQuestionsAll.filter(q => selectedUnits.has(q.s || "その他"));
+    } else {
+      masterQuestions = masterQuestionsAll;
     }
 
     if (!masterQuestions || masterQuestions.length === 0) {
@@ -1664,3 +1874,4 @@
 </script>
 </body>
 </html>
+    <!-- このアプリは麻生公務員専門学校北九州校　教務　世永大一朗によって作成されました。無断使用を禁止します。 -->
